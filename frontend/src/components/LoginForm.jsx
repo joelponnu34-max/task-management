@@ -5,30 +5,33 @@ import '../styles/auth.css';
 export const LoginForm = ({ onSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, error: authError, setError: setAuthError } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setLocalError('');
+    setAuthError(null);
     setIsLoading(true);
 
     try {
       await login(email, password);
       onSuccess && onSuccess();
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      setLocalError(err.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const displayError = localError || authError;
+
   return (
     <div className="auth-container">
       <div className="auth-card">
         <h2>Login</h2>
-        {error && <div className="error-message">{error}</div>}
+        {displayError && <div className="error-message">{displayError}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="email">Email</label>
@@ -39,6 +42,7 @@ export const LoginForm = ({ onSuccess }) => {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
+              placeholder="you@example.com"
             />
           </div>
           <div className="form-group">
@@ -50,9 +54,10 @@ export const LoginForm = ({ onSuccess }) => {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={isLoading}
+              placeholder="••••••••"
             />
           </div>
-          <button type="submit" disabled={isLoading}>
+          <button type="submit" disabled={isLoading} className="btn-primary">
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>

@@ -1,109 +1,147 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import React, { useState } from 'react';
+import { useTasks } from '../hooks/useTasks';
+import { createClient } from '@supabase/supabase-js';
 import '../styles/tasks.css';
 
-const API_BASE_URL = `http://${window.location.hostname}:5000`;
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_SUPABASE_ANON_KEY
+);
 
 export const TaskList = () => {
-  const [tasks, setTasks] = useState([]);
+  const { tasks, loading, error, createTask, updateTask, deleteTask, completeTask } = useTasks();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [users, setUsers] = useState([]);
-  const [assignedTo, setAssignedTo] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { token } = useAuth();
-
-  useEffect(() => {
-    if (token) {
-      fetchTasks();
-      fetchUsers();
-    }
-  }, [token]);
-
-  const fetchTasks = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/tasks`);
-      setTasks(response.data);
-    } catch (err) {
-      setError('Failed to fetch tasks');
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/users`);
-      setUsers(response.data);
-    } catch (err) {
-      console.error('Failed to fetch users');
-    }
-  };
+  const [priority, setPriority] = useState('medium');
+  const [dueDate, setDueDate] = useState('');
+  const [category, setCategory] = useState('');
+  const [localError, setLocalError] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterPriority, setFilterPriority] = useState('all');
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({});
 
   const handleAddTask = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError('Task title is required');
+      setLocalError('Task title is required');
       return;
     }
 
-    setLoading(true);
-    setError('');
+    setIsCreating(true);
+    setLocalError('');
 
     try {
-      await axios.post(`${API_BASE_URL}/api/tasks`, {
+      await createTask({
         title,
         description,
-        assigned_to: assignedTo || null,
+        priority,
+        due_date: dueDate || null,
+        category: category || null,
+        status: 'pending',
       });
       setTitle('');
       setDescription('');
-      setAssignedTo('');
-      fetchTasks();
+      setPriority('medium');
+      setDueDate('');
+      setCategory('');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create task');
+      setLocalError(err.message || 'Failed to create task');
     } finally {
-      setLoading(false);
+      setIsCreating(false);
     }
   };
 
-  const handleCompleteTask = async (id) => {
+  const handleUpdateTask = async (taskId, updates) => {
     try {
-      await axios.patch(`${API_BASE_URL}/api/tasks/${id}/complete`);
-      fetchTasks();
+      setLocalError('');
+      await updateTask(taskId, updates);
+      setEditingId(null);
+      setEditData({});
     } catch (err) {
-      setError('Failed to complete task');
+      setLocalError(err.message || 'Failed to update task');
     }
   };
 
-  const handleDeleteTask = async (id) => {
-    try {
-      await axios.delete(`${API_BASE_URL}/api/tasks/${id}`);
-      fetchTasks();
-    } catch (err) {
-      setError('Failed to delete task');
+  const handleDeleteTask = async (taskId) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      try {
+        setLocalError('');
+        await deleteTask(taskId);
+      } catch (err) {
+        setLocalError(err.message || 'Failed to delete task');
+      }
     }
   };
+
+  const filteredTasks = tasks.filter((task) => {
+    if (filterStatus !== 'all' && task.status !== filterStatus) return false;
+    if (filterPriority !== 'all' && task.priority !== filterPriority) return false;
+    return true;
+  });
+
+  const getPriorityColor = (priority) => {
+    return priority === 'high' ? '#ef4444' : priority === 'medium' ? '#f59e0b' : '#10b981';
+  };
+
+  const displayError = localError || error;
 
   return (
     <div className="task-container">
-      <h1>Team Tasks</h1>
+      <h1>Tasks</h1>
 
       <div className="task-form-container">
-        <h2>Add New Task</h2>
-        {error && <div className="error-message">{error}</div>}
+        <h2>Create New Task</h2>
+        {displayError && <div className="error-message">{displayError}</div>}
         <form onSubmit={handleAddTask}>
-          <div className="form-group">
-            <label htmlFor="title">Task Title</label>
-            <input
-              id="title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              disabled={loading}
-              placeholder="Enter task title"
-            />
+          <div className="form-grid">
+            <div className="form-group">
+              <label htmlFor="title">Title *</label>
+              <input
+                id="title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                disabled={isCreating}
+                placeholder="Task title"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="priority">Priority</label>
+              <select
+                id="priority"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                disabled={isCreating}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="dueDate">Due Date</label>
+              <input
+                id="dueDate"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                disabled={isCreating}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="category">Category</label>
+              <input
+                id="category"
+                type="text"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                disabled={isCreating}
+                placeholder="e.g., Work, Personal"
+              />
+            </div>
           </div>
           <div className="form-group">
             <label htmlFor="description">Description</label>
@@ -111,65 +149,95 @@ export const TaskList = () => {
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              disabled={loading}
-              placeholder="Enter task description (optional)"
+              disabled={isCreating}
+              placeholder="Task description (optional)"
+              rows="3"
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="assignedTo">Assign To</label>
-            <select
-              id="assignedTo"
-              value={assignedTo}
-              onChange={(e) => setAssignedTo(e.target.value)}
-              disabled={loading}
-            >
-              <option value="">Unassigned</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.username}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button type="submit" disabled={loading}>
-            {loading ? 'Creating...' : 'Create Task'}
+          <button type="submit" disabled={isCreating} className="btn-primary">
+            {isCreating ? 'Creating...' : 'Create Task'}
           </button>
         </form>
       </div>
 
       <div className="tasks-list">
-        <h2>Tasks ({tasks.length})</h2>
-        {tasks.length === 0 ? (
+        <div className="tasks-header">
+          <h2>Tasks ({filteredTasks.length})</h2>
+          <div className="filters">
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="filter-select">
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="filter-select">
+              <option value="all">All Priority</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+
+        {loading && <div className="loading">Loading tasks...</div>}
+        {!loading && filteredTasks.length === 0 ? (
           <p className="no-tasks">No tasks yet. Create one to get started!</p>
         ) : (
           <div className="tasks-grid">
-            {tasks.map((task) => (
-              <div key={task.id} className={`task-card ${task.completed ? 'completed' : ''}`}>
+            {filteredTasks.map((task) => (
+              <div key={task.id} className={`task-card ${task.status}`}>
                 <div className="task-header">
                   <h3>{task.title}</h3>
-                  <span className={`status ${task.status}`}>{task.status}</span>
+                  <div className="task-badges">
+                    <span className="priority-badge" style={{ backgroundColor: getPriorityColor(task.priority) }}>
+                      {task.priority}
+                    </span>
+                    <span className={`status-badge ${task.status}`}>{task.status}</span>
+                  </div>
                 </div>
                 {task.description && <p className="task-description">{task.description}</p>}
                 <div className="task-meta">
-                  {task.assigned_to_name && <span className="assigned">👤 {task.assigned_to_name}</span>}
-                  <span className="created-by">📝 By {task.created_by_name}</span>
+                  {task.category && <span className="category">📁 {task.category}</span>}
+                  {task.due_date && <span className="due-date">📅 {new Date(task.due_date).toLocaleDateString()}</span>}
                 </div>
                 <div className="task-actions">
-                  {!task.completed && (
+                  {task.status !== 'completed' && (
+                    <>
+                      {task.status === 'pending' && (
+                        <button
+                          onClick={() => handleUpdateTask(task.id, { status: 'in_progress' })}
+                          className="btn-action btn-start"
+                          title="Start task"
+                        >
+                          Start
+                        </button>
+                      )}
+                      {task.status === 'in_progress' && (
+                        <button
+                          onClick={() => completeTask(task.id)}
+                          className="btn-action btn-complete"
+                          title="Mark as complete"
+                        >
+                          Complete
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {task.status === 'completed' && (
                     <button
-                      onClick={() => handleCompleteTask(task.id)}
-                      className="btn-complete"
-                      title="Mark as complete"
+                      onClick={() => handleUpdateTask(task.id, { status: 'pending' })}
+                      className="btn-action btn-reopen"
+                      title="Reopen task"
                     >
-                      ✓ Complete
+                      Reopen
                     </button>
                   )}
                   <button
                     onClick={() => handleDeleteTask(task.id)}
-                    className="btn-delete"
+                    className="btn-action btn-delete"
                     title="Delete task"
                   >
-                    🗑 Delete
+                    Delete
                   </button>
                 </div>
               </div>

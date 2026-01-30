@@ -3,12 +3,8 @@ import { LoginForm } from '../components/LoginForm';
 import { RegisterForm } from '../components/RegisterForm';
 import '../styles/auth.css';
 
-export const AuthPage = ({ onLoginSuccess }) => {
+export const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
-
-  const handleSuccess = () => {
-    onLoginSuccess && onLoginSuccess();
-  };
 
   return (
     <div className="auth-page">
@@ -28,9 +24,9 @@ export const AuthPage = ({ onLoginSuccess }) => {
       </div>
 
       {isLogin ? (
-        <LoginForm onSuccess={handleSuccess} />
+        <LoginForm />
       ) : (
-        <RegisterForm onSuccess={handleSuccess} />
+        <RegisterForm />
       )}
 
       <div className="auth-info">
