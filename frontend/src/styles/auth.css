@@ -1,0 +1,80 @@
+.auth-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.auth-toggle {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.auth-toggle button {
+  flex: 1;
+  padding: 10px 20px;
+  background: transparent;
+  color: white;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.auth-toggle button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.auth-toggle button.active {
+  background: white;
+  color: #667eea;
+  border-color: white;
+}
+
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.auth-card {
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-card h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+  font-size: 28px;
+}
+
+.auth-card form button {
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+.auth-info {
+  position: absolute;
+  bottom: 30px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
